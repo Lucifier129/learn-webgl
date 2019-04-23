@@ -340,7 +340,7 @@ function makeLostContextSimulatingContext(ctx) {
   function clearErrors() {
     var k = Object.keys(glErrorShadow_);
     for (var ii = 0; ii < k.length; ++ii) {
-      delete glErrorShdow_[k];
+      // delete glErrorShdow_[k];
     }
   }
 
@@ -377,15 +377,15 @@ function makeLostContextSimulatingContext(ctx) {
       var resource = resourceDb_[ii];
       if (resource instanceof WebGLBuffer) {
         ctx.deleteBuffer(resource);
-      } else if (resource instanceof WebctxFramebuffer) {
+      } else if (resource instanceof WebGLFramebuffer) {
         ctx.deleteFramebuffer(resource);
-      } else if (resource instanceof WebctxProgram) {
+      } else if (resource instanceof WebGLProgram) {
         ctx.deleteProgram(resource);
-      } else if (resource instanceof WebctxRenderbuffer) {
+      } else if (resource instanceof WebGLRenderbuffer) {
         ctx.deleteRenderbuffer(resource);
-      } else if (resource instanceof WebctxShader) {
+      } else if (resource instanceof WebGLShader) {
         ctx.deleteShader(resource);
-      } else if (resource instanceof WebctxTexture) {
+      } else if (resource instanceof WebGLTexture) {
         ctx.deleteTexture(resource);
       }
     }

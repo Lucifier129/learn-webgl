@@ -8,22 +8,37 @@ const App = () => {
 
   useEffect(() => {
     let handleHashChange = () => {
-      let hash = Number(location.hash)
-      if (!isNaN(hash)) {
-        setIndex(hash)
-      } else {
-        location.hash = 0
+      let hash = window.location.hash
+      if (hash.length <= 1) {
+        setIndex(-1)
+        return
       }
+      let targetIndex = Number(hash.slice(1))
+      if (!isNaN(targetIndex)) setIndex(targetIndex)
     }
-    window.addEventListener('hashchange', handleHashChange)
     handleHashChange()
+    window.addEventListener('hashchange', handleHashChange)
     return () => {
       window.removeEventListener('hashchange', handleHashChange)
     }
   }, [])
 
-  if (!Demo) return
-  return <Demo />
+  return (
+    <>
+      <div>
+        <a href="#">首页</a>
+      </div>
+      {!!Demo && <Demo />}
+      {!Demo &&
+        demos.map((_, index) => {
+          return (
+            <div key={index}>
+              <a href={`#${index}`}>demo {index + 1}</a>
+            </div>
+          )
+        })}
+    </>
+  )
 }
 
 ReactDOM.render(<App />, document.getElementById('root'))
