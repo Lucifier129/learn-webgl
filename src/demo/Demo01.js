@@ -7,11 +7,13 @@ export default function Demo01() {
   useEffect(() => {
     let canvas = ref.current
     let gl = getWebGLContext(canvas)
-
-    setInterval(() => {
+    let render = () => {
       gl.clearColor(Math.random(), Math.random(), Math.random(), 1.0)
       gl.clear(gl.COLOR_BUFFER_BIT)
-    }, 1000)
+    }
+
+    setInterval(render, 500)
+    render()
   }, [])
 
   return <canvas width={400} height={400} ref={ref} />

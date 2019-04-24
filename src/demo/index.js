@@ -1,5 +1,7 @@
 import Demo01 from './Demo01'
 import Demo02 from './Demo02'
 import Demo03 from './Demo03'
+import Demo04 from './Demo04'
+import Demo05 from './Demo05'
 
-export default [Demo01, Demo02, Demo03]
+export default [Demo01, Demo02, Demo03, Demo04, Demo05]

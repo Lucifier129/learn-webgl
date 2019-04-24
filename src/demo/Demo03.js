@@ -10,9 +10,10 @@ export default function Demo02() {
 
     let VSHADER_SOURCE = `
       attribute vec4 a_Position;
+      attribute float a_PointSize;
       void main() {
         gl_Position = a_Position;
-        gl_PointSize = 10.0;
+        gl_PointSize = a_PointSize;
       }
     `
 
@@ -29,27 +30,32 @@ export default function Demo02() {
     }
 
     let a_Position = gl.getAttribLocation(gl.program, 'a_Position')
+    let a_PointSize = gl.getAttribLocation(gl.program, 'a_PointSize')
 
-    if (a_Position < 0) {
+    if (a_Position < 0 || a_PointSize < 0) {
       throw new Error('failed to get attribute location from webgl')
     }
 
-    gl.clearColor(0, 0, 0, 1)
-    gl.clear(gl.COLOR_BUFFER_BIT)
+    let render = (position, pointSize = 10) => {
+      gl.clearColor(0, 0, 0, 1)
+      gl.clear(gl.COLOR_BUFFER_BIT)
+
+      gl.vertexAttrib3f(a_Position, ...position)
+      gl.vertexAttrib1f(a_PointSize, pointSize)
+      gl.drawArrays(gl.POINTS, 0, 1)
+    }
+
+    render([0, 0, 0])
 
     let count = 0
     setInterval(() => {
-      let angle = (count / 180) * Math.PI
-      let x = Math.sin(angle)
-      let y = Math.cos(angle)
+      let angle = (count / 180) * Math.PI * 20
+      let x = Math.sin(angle) / 4
+      let y = Math.cos(angle) / 4
 
       count = (count + 1) % 360
-      gl.vertexAttrib3f(a_Position, x, y, 0.0)
-      gl.drawArrays(gl.POINTS, 0, 1)
+      render([x, y, 0])
     }, 1000 / 60)
-
-    gl.vertexAttrib3f(a_Position, 0, 0, 0.0)
-    gl.drawArrays(gl.POINTS, 0, 1)
   }, [])
 
   return <canvas width={400} height={400} ref={ref} />
