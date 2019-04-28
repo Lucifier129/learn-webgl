@@ -12,7 +12,7 @@ export const getPosition = (canvas, event) => {
 }
 
 export const createVertexList = (list = []) => {
-  return new Float32Array(list.flat())
+  return new Float32Array(list.flat(Infinity))
 }
 
 /**
