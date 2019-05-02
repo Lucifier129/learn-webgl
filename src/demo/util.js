@@ -1,3 +1,18 @@
+export const glsl = x => x
+
+export const loadImage = src => {
+  return new Promise((resolve, reject) => {
+    let image = new Image()
+    image.onload = () => resolve(image)
+    image.onerror = error => reject(error)
+    image.src = src
+  })
+}
+
+export const loadImageList = (list = []) => {
+  return Promise.all(list.map(loadImage))
+}
+
 export const getX = (rect, clientX) => {
   return (clientX - rect.left - rect.width / 2) / (rect.width / 2)
 }
