@@ -4,6 +4,8 @@
   "private": true,
   "homepage": "/learn-webgl/build",
   "dependencies": {
+    "gl-matrix": "^3.0.0",
+    "koa-compose": "^4.1.0",
     "react": "^16.8.6",
     "react-dom": "^16.8.6",
     "react-scripts": "2.1.8",
