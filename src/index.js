@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, Suspense } from 'react'
 import ReactDOM from 'react-dom'
 import demos from './demo'
 
@@ -28,7 +28,7 @@ const App = () => {
       <div>
         <a href="#">首页</a>
       </div>
-      {!!Demo && <Demo />}
+      <Suspense fallback={'loading...'}>{!!Demo && <Demo />}</Suspense>
       {!Demo &&
         demos.map((_, index) => {
           return (
