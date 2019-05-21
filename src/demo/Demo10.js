@@ -1,13 +1,6 @@
 import React, { useEffect, useRef } from 'react'
-import { getWebGLContext, initShaders } from '../lib/cuon-utils'
-import {
-  createVertexList,
-  createRotateZMatrix,
-  createScaleMatrix,
-  createTranslateMatrix,
-  loadImageList,
-  glsl
-} from './util'
+import {} from 'gl-matrix'
+import { loadImageList, glsl } from './util'
 import skyImageSrc from './image/sky.jpg'
 import circleImageSrc from './image/circle.gif'
 
@@ -16,7 +9,7 @@ export default function Demo02() {
 
   useEffect(() => {
     let canvas = ref.current
-    let gl = getWebGLContext(canvas)
+    let gl = canvas.getContext('webgl')
 
     let VSHADER_SOURCE = glsl`
       attribute vec4 a_Position;
@@ -40,14 +33,8 @@ export default function Demo02() {
       }
     `
 
-    let isSuccess = initShaders(gl, VSHADER_SOURCE, FSHADER_SOURCE)
-
-    if (!isSuccess) {
-      throw new Error('failed to initilize shaders')
-    }
-
-    let a_Position = gl.getAttribLocation(gl.program, 'a_Position')
-    let a_TexCoor = gl.getAttribLocation(gl.program, 'a_TexCoor')
+    let { program } = makeProgram(VSHADER_SOURCE, FSHADER_SOURCE)({ gl })
+    let aLocation = makeAttrLocation('a_Position', 'a_TexCoor')
 
     let vertexList = createVertexList([
       [[-0.5, 0.5], [0.0, 1.0]],
@@ -97,4 +84,76 @@ export default function Demo02() {
   }, [])
 
   return <canvas width={400} height={400} ref={ref} />
+}
+
+const pipe = (...args) => args.reduce((a, f) => f(a))
+
+const makeProgram = (vshaderSource, fshaderSource) => ({ gl, ...state }) => {
+  let vshader = createShader(gl, gl.VERTEX_SHADER, vshaderSource)
+  let fshader = createShader(gl, gl.FRAGMENT_SHADER, fshaderSource)
+  let shader = { vshader, fshader }
+  let program = createProgram(gl, shader)
+
+  return {
+    ...state,
+    shader,
+    program,
+    gl
+  }
+}
+
+const createProgram = (gl, shader) => {
+  let program = gl.createProgram()
+
+  gl.attachShader(program, shader.vshader)
+  gl.attachShader(program, shader.fshader)
+  gl.linkProgram(program)
+
+  let message = gl.getProgramInfoLog(program)
+  if (message) throw new Error(message)
+  return program
+}
+
+const createShader = (gl, type, source) => {
+  let shader = gl.createShader(type)
+
+  gl.shaderSource(shader, source)
+  gl.compileShader(shader)
+
+  let message = gl.getShaderInfoLog(shader)
+  if (message) throw new Error(message)
+  return shader
+}
+
+const mapListToObj = (list, f) => {
+  return list.reduce((obj, name, index) => {
+    obj[name] = f(name, index, obj)
+    return obj
+  }, {})
+}
+
+const makeAttrLocation = (...nameList) => ({ gl, program, ...state }) => {
+  let aLocation = mapListToObj(nameList, name =>
+    gl.getAttribLocation(program, name)
+  )
+
+  return {
+    ...state,
+    gl,
+    program,
+    aLocation
+  }
+}
+
+const makeUniformLocation = (...nameList) => ({ gl, program, ...state }) => {
+  let uLocation = mapListToObj(nameList, name =>
+    gl.getUniformLocation(program, name)
+  )
+
+  return {
+    ...state,
+    gl,
+    program,
+    uLocation
+  }
 }
