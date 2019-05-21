@@ -102,41 +102,43 @@ const makeItem = async gl => {
   let imageSrcList = [skyImageSrc, circleImageSrc]
   let [skyImage, circleImage] = await loadImageList(imageSrcList)
 
-  attachTexture2D(gl, {
-    unit: 0,
-    location: location.uSampler0,
-    image: {
-      source: skyImage,
-      format: gl.RGBA,
-      type: gl.UNSIGNED_BYTE
-    },
-    parameters: [
-      {
-        name: gl.TEXTURE_MIN_FILTER,
-        value: gl.LINEAR
-      }
-    ]
-  })
-
-  attachTexture2D(gl, {
-    unit: 1,
-    location: location.uSampler1,
-    image: {
-      source: circleImage,
-      format: gl.RGBA,
-      type: gl.UNSIGNED_BYTE
-    },
-    parameters: [
-      {
-        name: gl.TEXTURE_MIN_FILTER,
-        value: gl.LINEAR
-      }
-    ]
-  })
-
-  let use = () => {
+  let useProgram = () => {
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
     gl.useProgram(program)
+  }
+
+  let useTexture = () => {
+    attachTexture2D(gl, {
+      unit: 0,
+      location: location.uSampler0,
+      image: {
+        source: skyImage,
+        format: gl.RGBA,
+        type: gl.UNSIGNED_BYTE
+      },
+      parameters: [
+        {
+          name: gl.TEXTURE_MIN_FILTER,
+          value: gl.LINEAR
+        }
+      ]
+    })
+
+    attachTexture2D(gl, {
+      unit: 1,
+      location: location.uSampler1,
+      image: {
+        source: circleImage,
+        format: gl.RGBA,
+        type: gl.UNSIGNED_BYTE
+      },
+      parameters: [
+        {
+          name: gl.TEXTURE_MIN_FILTER,
+          value: gl.LINEAR
+        }
+      ]
+    })
   }
 
   let draw = () => {
@@ -151,7 +153,8 @@ const makeItem = async gl => {
   }
 
   let render = props => {
-    use()
+    useProgram()
+    useTexture()
     rotate(props.radian, props.axis)
     draw()
   }
@@ -214,27 +217,22 @@ const enableAttribute = (
   gl.enableVertexAttribArray(location)
 }
 
-const mapKeyListToObj = (list, f) => {
-  return list.reduce((obj, name, index) => {
+const mapKeyListToObj = (list, f) =>
+  list.reduce((obj, name, index) => {
     obj[name] = f(name, index)
     return obj
   }, {})
-}
 
-const makeAttributeLocation = (gl, program, nameList = []) => {
-  return mapKeyListToObj(nameList, name => gl.getAttribLocation(program, name))
-}
+const makeAttributeLocation = (gl, program, nameList = []) =>
+  mapKeyListToObj(nameList, name => gl.getAttribLocation(program, name))
 
-const makeUniformLocation = (gl, program, nameList = []) => {
-  return mapKeyListToObj(nameList, name => gl.getUniformLocation(program, name))
-}
+const makeUniformLocation = (gl, program, nameList = []) =>
+  mapKeyListToObj(nameList, name => gl.getUniformLocation(program, name))
 
-const makeLocation = (gl, { program, attribute, uniform }) => {
-  return {
-    ...makeAttributeLocation(gl, program, attribute),
-    ...makeUniformLocation(gl, program, uniform)
-  }
-}
+const makeLocation = (gl, { program, attribute, uniform }) => ({
+  ...makeAttributeLocation(gl, program, attribute),
+  ...makeUniformLocation(gl, program, uniform)
+})
 
 const attachTexture2D = (
   gl,
@@ -257,8 +255,6 @@ const attachTexture2D = (
     type: gl.UNSIGNED_BYTE,
     ...image
   }
-
-  console.log(location, unit, image, flipY, parameters)
 
   gl.texImage2D(
     gl.TEXTURE_2D,
