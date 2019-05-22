@@ -4,6 +4,7 @@
   "private": true,
   "homepage": "/learn-webgl/build",
   "dependencies": {
+    "dat.gui": "^0.7.6",
     "gl-matrix": "^3.0.0",
     "koa-compose": "^4.1.0",
     "react": "^16.8.6",

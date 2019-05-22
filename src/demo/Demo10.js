@@ -1,6 +1,8 @@
 import React, { useEffect, useRef } from 'react'
 import { mat4, vec3 } from 'gl-matrix'
+import * as dat from 'dat.gui'
 import { loadImageList, glsl, createVertexList } from './util'
+import { Matrix4 } from '../lib/cuon-matrix'
 import skyImageSrc from './image/sky.jpg'
 import circleImageSrc from './image/circle.gif'
 
@@ -11,29 +13,190 @@ export default function Demo02() {
     let canvas = ref.current
     let gl = canvas.getContext('webgl')
     let angle = 0
-    makeItem(gl).then(async item => {
-      let render = async () => {
-        let radian = ((angle % 360) * Math.PI) / 180
-        let axis = vec3.fromValues(0, 0, 1)
-        let props = {
-          radian,
-          axis
-        }
+    // makeItem(gl).then(async item => {
+    //   let render = async () => {
+    //     let radian = ((angle % 360) * Math.PI) / 180
+    //     let axis = vec3.fromValues(0, 0, 1)
+    //     let props = {
+    //       radian,
+    //       axis
+    //     }
 
-        gl.clearColor(0, 0, 0, 1)
-        gl.clear(gl.COLOR_BUFFER_BIT)
+    //     gl.clearColor(0, 0, 0, 1)
+    //     gl.clear(gl.COLOR_BUFFER_BIT)
 
-        item.render(props)
+    //     item.render(props)
 
-        angle += 1
-        requestAnimationFrame(render)
-      }
+    //     angle += 1
+    //     requestAnimationFrame(render)
+    //   }
 
-      render()
+    //   render()
+    // })
+
+    makeCube(gl).then(async cube => {
+
+      let gui = new dat.GUI({ name: 'cube' })
+
+      let matrix = new Matrix4()
+
+      matrix.setPerspective(30, 1, 1, 100);
+      matrix.lookAt(3, 3, 7, 0, 0, 0, 0, 1, 0);
+
+      let mvpMatrix = mat4.create()
+
+      mat4.perspective(mvpMatrix, 30 * Math.PI / 180, 1, 1, 100)
+      mat4.lookAt(mvpMatrix, [0.2, 1, 1], [0, 0, 0], [0, 1, 0])
+      
+      console.log({ mvpMatrix, matrix: matrix.elements})
+
+      gl.enable(gl.DEPTH_TEST)
+      gl.clearColor(0, 0, 0, 1)
+      gl.clear(gl.COLOR_BUFFER_BIT)
+      cube.render(mvpMatrix)
+      // cube.render(matrix.elements)
     })
   }, [])
 
   return <canvas width={400} height={400} ref={ref} />
+}
+
+const makeCube = async gl => {
+  let VSHADER_SOURCE = glsl`
+    attribute vec4 aPosition;
+    attribute vec4 aColor;
+    uniform mat4 uMvpMatrix;
+    varying vec4 vColor;
+    void main() {
+      gl_Position = uMvpMatrix * aPosition;
+      vColor = aColor;
+    }
+  `
+
+  let FSHADER_SOURCE = glsl`
+    precision mediump float;
+    varying vec4 vColor;
+    void main() {
+      gl_FragColor = vColor;
+    }
+  `
+
+  let program = makeProgram(gl, {
+    vertex: VSHADER_SOURCE,
+    fragment: FSHADER_SOURCE
+  })
+
+  let color = (r, g, b) => [r, g, b].map(n => n / 255)
+
+  let colors = [
+    color(161, 98, 247),
+    color(111, 136, 254),
+    color(69, 227, 255),
+    color(92, 127, 167),
+    color(82, 140, 162),
+    color(165, 222, 141),
+    color(240, 74, 76),
+    color(62, 97, 155),
+    color(15, 107, 172),
+    color(37, 139, 214),
+    color(133, 183, 254),
+    color(198, 206, 255)
+  ]
+
+  let vertexList = createVertexList([
+    // front
+    [-0.5, 0.5, -0.5, colors[0]],
+    [-0.5, -0.5, -0.5, colors[0]],
+    [0.5, 0.5, -0.5, colors[0]],
+    [0.5, -0.5, -0.5, colors[0]],
+    // back
+    [-0.5, 0.5, 0.5, colors[1]],
+    [-0.5, -0.5, 0.5, colors[1]],
+    [0.5, 0.5, 0.5, colors[1]],
+    [0.5, -0.5, 0.5, colors[1]],
+    // top
+    [-0.5, 0.5, -0.5, colors[2]],
+    [-0.5, 0.5, 0.5, colors[2]],
+    [0.5, 0.5, -0.5, colors[2]],
+    [0.5, 0.5, 0.5, colors[2]],
+    // bottom
+    [-0.5, -0.5, -0.5, colors[3]],
+    [-0.5, -0.5, 0.5, colors[3]],
+    [0.5, -0.5, -0.5, colors[3]],
+    [0.5, -0.5, 0.5, colors[3]],
+    // left
+    [-0.5, 0.5, -0.5, colors[4]],
+    [-0.5, -0.5, -0.5, colors[4]],
+    [-0.5, 0.5, 0.5, colors[4]],
+    [-0.5, -0.5, 0.5, colors[4]],
+    // right
+    [0.5, 0.5, -0.5, colors[5]],
+    [0.5, -0.5, -0.5, colors[5]],
+    [0.5, -0.5, 0.5, colors[5]],
+    [0.5, 0.5, 0.5, colors[5]]
+  ])
+
+  let location = makeLocation(gl, {
+    program: program,
+    attribute: ['aPosition', 'aColor'],
+    uniform: ['uMvpMatrix']
+  })
+
+  let FSIZE = vertexList.BYTES_PER_ELEMENT
+
+  let vertexVBO = makeVBO(gl, {
+    type: gl.ARRAY_BUFFER,
+    data: vertexList
+  })
+
+  enableAttributes(gl, gl.ARRAY_BUFFER, vertexVBO, [
+    {
+      location: location.aPosition,
+      size: 3,
+      stride: FSIZE * 6,
+      offset: 0
+    },
+    {
+      location: location.aColor,
+      size: 3,
+      stride: FSIZE * 6,
+      offset: FSIZE * 3
+    }
+  ])
+
+  let indexList = new Uint8Array(
+    [
+      [0, 1, 2],
+      [1, 2, 3],
+      [4, 5, 6],
+      [5, 6, 7],
+      [8, 9, 10],
+      [9, 10, 11],
+      [12, 13, 14],
+      [13, 14, 15],
+      [16, 17, 18],
+      [17, 18, 19],
+      [20, 21, 22],
+      [21, 22, 23]
+    ].flat(Infinity)
+  )
+
+  let indexVBO = makeVBO(gl, {
+    type: gl.ELEMENT_ARRAY_BUFFER,
+    data: indexList
+  })
+
+  gl.getExtension('OES_element_index_uint')
+
+  let render = (mvpMatrix) => {
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexVBO)
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexVBO)
+    gl.useProgram(program)
+    gl.uniformMatrix4fv(location.uMvpMatrix, false, mvpMatrix)
+    gl.drawElements(gl.TRIANGLES, indexList.length, gl.UNSIGNED_BYTE, 0)
+  }
+
+  return { render }
 }
 
 const makeItem = async gl => {
@@ -80,30 +243,31 @@ const makeItem = async gl => {
 
   let FSIZE = vertexList.BYTES_PER_ELEMENT
 
-  let buffer = attachBuffer(gl, {
+  let VBO = makeVBO(gl, {
     type: gl.ARRAY_BUFFER,
     data: vertexList
   })
 
-  enableAttribute(gl, {
-    location: location.aPosition,
-    size: 2,
-    stride: FSIZE * 4,
-    offset: 0
-  })
-
-  enableAttribute(gl, {
-    location: location.aTexCoor,
-    size: 2,
-    stride: FSIZE * 4,
-    offset: FSIZE * 2
-  })
+  enableAttributes(gl, gl.ARRAY_BUFFER, VBO, [
+    {
+      location: location.aPosition,
+      size: 2,
+      stride: FSIZE * 4,
+      offset: 0
+    },
+    {
+      location: location.aTexCoor,
+      size: 2,
+      stride: FSIZE * 4,
+      offset: FSIZE * 2
+    }
+  ])
 
   let imageSrcList = [skyImageSrc, circleImageSrc]
   let [skyImage, circleImage] = await loadImageList(imageSrcList)
 
   let useProgram = () => {
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
+    gl.bindBuffer(gl.ARRAY_BUFFER, VBO)
     gl.useProgram(program)
   }
 
@@ -202,19 +366,30 @@ const createShader = (gl, { type, source }) => {
   return shader
 }
 
-const attachBuffer = (gl, { type, data, usage = gl.STATIC_DRAW }) => {
+const makeVBO = (gl, { type, data, usage = gl.STATIC_DRAW }) => {
   let buffer = gl.createBuffer()
   gl.bindBuffer(type, buffer)
   gl.bufferData(type, data, usage)
+  // unbind
+  gl.bindBuffer(type, null)
   return buffer
 }
 
-const enableAttribute = (
-  gl,
-  { location, size, type = gl.FLOAT, normalized = false, stride, offset }
-) => {
-  gl.vertexAttribPointer(location, size, type, normalized, stride, offset)
-  gl.enableVertexAttribArray(location)
+const enableAttributes = (gl, bufferType, VBO, args = []) => {
+  gl.bindBuffer(bufferType, VBO)
+  args.forEach(params => {
+    let {
+      location,
+      size,
+      type = gl.FLOAT,
+      normalized = false,
+      stride,
+      offset
+    } = params
+    gl.vertexAttribPointer(location, size, type, normalized, stride, offset)
+    gl.enableVertexAttribArray(location)
+  })
+  gl.bindBuffer(bufferType, null)
 }
 
 const mapKeyListToObj = (list, f) =>
