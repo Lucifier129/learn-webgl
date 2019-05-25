@@ -1,8 +1,7 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { mat4, vec3 } from 'gl-matrix'
 import * as dat from 'dat.gui'
 import { loadImageList, glsl, createVertexList } from './util'
-import { Matrix4 } from '../lib/cuon-matrix'
 import skyImageSrc from './image/sky.jpg'
 import circleImageSrc from './image/circle.gif'
 
@@ -12,53 +11,113 @@ export default function Demo02() {
   useEffect(() => {
     let canvas = ref.current
     let gl = canvas.getContext('webgl')
-    let angle = 0
-    // makeItem(gl).then(async item => {
-    //   let render = async () => {
-    //     let radian = ((angle % 360) * Math.PI) / 180
-    //     let axis = vec3.fromValues(0, 0, 1)
-    //     let props = {
-    //       radian,
-    //       axis
-    //     }
-
-    //     gl.clearColor(0, 0, 0, 1)
-    //     gl.clear(gl.COLOR_BUFFER_BIT)
-
-    //     item.render(props)
-
-    //     angle += 1
-    //     requestAnimationFrame(render)
-    //   }
-
-    //   render()
-    // })
-
-    makeCube(gl).then(async cube => {
-
-      let gui = new dat.GUI({ name: 'cube' })
-
-      let matrix = new Matrix4()
-
-      matrix.setPerspective(30, 1, 1, 100);
-      matrix.lookAt(3, 3, 7, 0, 0, 0, 0, 1, 0);
-
-      let mvpMatrix = mat4.create()
-
-      mat4.perspective(mvpMatrix, 30 * Math.PI / 180, 1, 1, 100)
-      mat4.lookAt(mvpMatrix, [0.2, 1, 1], [0, 0, 0], [0, 1, 0])
-      
-      console.log({ mvpMatrix, matrix: matrix.elements})
-
-      gl.enable(gl.DEPTH_TEST)
-      gl.clearColor(0, 0, 0, 1)
-      gl.clear(gl.COLOR_BUFFER_BIT)
-      cube.render(mvpMatrix)
-      // cube.render(matrix.elements)
-    })
+    gl.viewport(0, 0, canvas.width, canvas.height)
+    renderCube(gl)
   }, [])
 
   return <canvas width={400} height={400} ref={ref} />
+}
+
+const raf = f => {
+  let timer = null
+  let render = () => {
+    f()
+    timer = requestAnimationFrame(render)
+  }
+  render()
+  return () => cancelAnimationFrame(timer)
+}
+
+const renderItem = async gl => {
+  let angle = 0
+  let item = await makeItem(gl)
+  return raf(() => {
+    let radian = ((angle % 360) * Math.PI) / 180
+    let axis = vec3.fromValues(0, 0, 1)
+    let props = {
+      radian,
+      axis
+    }
+
+    gl.clearColor(0, 0, 0, 1)
+    gl.clear(gl.COLOR_BUFFER_BIT)
+
+    item.render(props)
+    angle += 1
+  })
+}
+
+const renderCube = async gl => {
+  let cube = await makeCube(gl)
+  let params = {
+    fovy: 30,
+    near: 1,
+    far: 100,
+    eyeX: 3,
+    eyeY: 3,
+    eyeZ: 7,
+    centerX: 0,
+    centerY: 0,
+    centerZ: 0,
+    upX: 0,
+    upY: 1,
+    upZ: 0,
+    scaleX: 1,
+    scaleY: 1,
+    scaleZ: 1
+  }
+
+  let gui = new dat.GUI({ name: 'cube' })
+
+  gui.add(params, 'fovy', 0, 90)
+  gui.add(params, 'near', 1, 1000)
+  gui.add(params, 'far', 0, 1000)
+  gui.add(params, 'eyeX', -10, 100)
+  gui.add(params, 'eyeY', -10, 100)
+  gui.add(params, 'eyeZ', -10, 100)
+  gui.add(params, 'centerX', -1, 1)
+  gui.add(params, 'centerY', -1, 1)
+  gui.add(params, 'centerZ', -1, 1)
+  gui.add(params, 'upX', -10, 10)
+  gui.add(params, 'upY', -10, 10)
+  gui.add(params, 'upZ', -10, 10)
+  gui.add(params, 'scaleX', 0, 10).step(0.1)
+  gui.add(params, 'scaleY', 0, 10).step(0.1)
+  gui.add(params, 'scaleZ', 0, 10).step(0.1)
+
+  return raf(() => {
+    let projection = mat4.create()
+    let modelview = mat4.create()
+    let mvp = mat4.create()
+
+    mat4.perspective(
+      projection,
+      (params.fovy * Math.PI) / 180,
+      1,
+      params.near,
+      params.far
+    )
+
+    mat4.lookAt(
+      modelview,
+      [params.eyeX, params.eyeY, params.eyeZ],
+      [params.centerX, params.centerY, params.centerZ],
+      [params.upX, params.upY, params.upZ]
+    )
+
+    mat4.scale(modelview, modelview, [
+      params.scaleX,
+      params.scaleY,
+      params.scaleZ
+    ])
+    
+    mat4.multiply(mvp, projection, modelview)
+
+    gl.enable(gl.DEPTH_TEST)
+    gl.clearColor(0, 0, 0, 1)
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+    cube.render(mvp)
+  })
 }
 
 const makeCube = async gl => {
@@ -110,10 +169,10 @@ const makeCube = async gl => {
     [0.5, 0.5, -0.5, colors[0]],
     [0.5, -0.5, -0.5, colors[0]],
     // back
-    [-0.5, 0.5, 0.5, colors[1]],
-    [-0.5, -0.5, 0.5, colors[1]],
-    [0.5, 0.5, 0.5, colors[1]],
-    [0.5, -0.5, 0.5, colors[1]],
+    [-0.5, 0.5, 0.5, colors[0]],
+    [-0.5, -0.5, 0.5, colors[0]],
+    [0.5, 0.5, 0.5, colors[0]],
+    [0.5, -0.5, 0.5, colors[0]],
     // top
     [-0.5, 0.5, -0.5, colors[2]],
     [-0.5, 0.5, 0.5, colors[2]],
@@ -131,16 +190,13 @@ const makeCube = async gl => {
     [-0.5, -0.5, 0.5, colors[4]],
     // right
     [0.5, 0.5, -0.5, colors[5]],
+    [0.5, 0.5, 0.5, colors[5]],
     [0.5, -0.5, -0.5, colors[5]],
-    [0.5, -0.5, 0.5, colors[5]],
-    [0.5, 0.5, 0.5, colors[5]]
+    [0.5, -0.5, 0.5, colors[5]]
   ])
 
-  let location = makeLocation(gl, {
-    program: program,
-    attribute: ['aPosition', 'aColor'],
-    uniform: ['uMvpMatrix']
-  })
+  let uniform = getUniform(gl, program)
+  let attribute = getAttribute(gl, program)
 
   let FSIZE = vertexList.BYTES_PER_ELEMENT
 
@@ -151,13 +207,13 @@ const makeCube = async gl => {
 
   enableAttributes(gl, gl.ARRAY_BUFFER, vertexVBO, [
     {
-      location: location.aPosition,
+      location: attribute.aPosition,
       size: 3,
       stride: FSIZE * 6,
       offset: 0
     },
     {
-      location: location.aColor,
+      location: attribute.aColor,
       size: 3,
       stride: FSIZE * 6,
       offset: FSIZE * 3
@@ -177,7 +233,7 @@ const makeCube = async gl => {
       [16, 17, 18],
       [17, 18, 19],
       [20, 21, 22],
-      [21, 22, 23]
+      [22, 21, 23]
     ].flat(Infinity)
   )
 
@@ -186,13 +242,11 @@ const makeCube = async gl => {
     data: indexList
   })
 
-  gl.getExtension('OES_element_index_uint')
-
-  let render = (mvpMatrix) => {
+  let render = mvpMatrix => {
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexVBO)
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexVBO)
     gl.useProgram(program)
-    gl.uniformMatrix4fv(location.uMvpMatrix, false, mvpMatrix)
+    gl.uniformMatrix4fv(uniform.uMvpMatrix, false, mvpMatrix)
     gl.drawElements(gl.TRIANGLES, indexList.length, gl.UNSIGNED_BYTE, 0)
   }
 
@@ -228,11 +282,8 @@ const makeItem = async gl => {
     fragment: FSHADER_SOURCE
   })
 
-  let location = makeLocation(gl, {
-    program,
-    attribute: ['aPosition', 'aTexCoor'],
-    uniform: ['uSampler0', 'uSampler1', 'uRotateM']
-  })
+  let uniform = getUniform(gl, program)
+  let attribute = getAttribute(gl, program)
 
   let vertexList = createVertexList([
     [[-0.5, 0.5], [0.0, 1.0]],
@@ -250,13 +301,13 @@ const makeItem = async gl => {
 
   enableAttributes(gl, gl.ARRAY_BUFFER, VBO, [
     {
-      location: location.aPosition,
+      location: attribute.aPosition,
       size: 2,
       stride: FSIZE * 4,
       offset: 0
     },
     {
-      location: location.aTexCoor,
+      location: attribute.aTexCoor,
       size: 2,
       stride: FSIZE * 4,
       offset: FSIZE * 2
@@ -274,7 +325,7 @@ const makeItem = async gl => {
   let useTexture = () => {
     attachTexture2D(gl, {
       unit: 0,
-      location: location.uSampler0,
+      location: uniform.uSampler0,
       image: {
         source: skyImage,
         format: gl.RGBA,
@@ -290,7 +341,7 @@ const makeItem = async gl => {
 
     attachTexture2D(gl, {
       unit: 1,
-      location: location.uSampler1,
+      location: uniform.uSampler1,
       image: {
         source: circleImage,
         format: gl.RGBA,
@@ -313,7 +364,7 @@ const makeItem = async gl => {
   let rotateM = mat4.create()
   let rotate = async (radian, axis) => {
     mat4.rotate(rotateM, identityM, radian, axis)
-    gl.uniformMatrix4fv(location.uRotateM, false, rotateM)
+    gl.uniformMatrix4fv(uniform.uRotateM, false, rotateM)
   }
 
   let render = props => {
@@ -392,22 +443,25 @@ const enableAttributes = (gl, bufferType, VBO, args = []) => {
   gl.bindBuffer(bufferType, null)
 }
 
-const mapKeyListToObj = (list, f) =>
-  list.reduce((obj, name, index) => {
-    obj[name] = f(name, index)
-    return obj
-  }, {})
+const getUniform = (gl, program) => {
+  let count = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS)
+  let uniform = {}
+  for (let i = 0; i < count; i++) {
+    const info = gl.getActiveUniform(program, i)
+    uniform[info.name] = gl.getUniformLocation(program, info.name)
+  }
+  return uniform
+}
 
-const makeAttributeLocation = (gl, program, nameList = []) =>
-  mapKeyListToObj(nameList, name => gl.getAttribLocation(program, name))
-
-const makeUniformLocation = (gl, program, nameList = []) =>
-  mapKeyListToObj(nameList, name => gl.getUniformLocation(program, name))
-
-const makeLocation = (gl, { program, attribute, uniform }) => ({
-  ...makeAttributeLocation(gl, program, attribute),
-  ...makeUniformLocation(gl, program, uniform)
-})
+const getAttribute = (gl, program) => {
+  let count = gl.getProgramParameter(program, gl.ACTIVE_ATTRIBUTES)
+  let attribute = {}
+  for (let i = 0; i < count; i++) {
+    const info = gl.getActiveAttrib(program, i)
+    attribute[info.name] = gl.getAttribLocation(program, info.name)
+  }
+  return attribute
+}
 
 const attachTexture2D = (
   gl,
