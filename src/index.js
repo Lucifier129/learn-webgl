@@ -2,6 +2,8 @@ import React, { useState, useEffect, Suspense } from 'react'
 import ReactDOM from 'react-dom'
 import demos from './demo'
 
+console.log(demos)
+
 const App = () => {
   let [index, setIndex] = useState(-1)
   let Demo = demos[index]
