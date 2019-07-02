@@ -40,9 +40,10 @@ const createRecord = () => {
 }
 
 class Sphere {
-  constructor(center, radius) {
+  constructor(center, radius, material) {
     this.center = center
     this.radius = radius
+    this.material = material
   }
   hit(ray, tmin, tmax, record) {
     let oc = subtract(ray.origin(), this.center)
@@ -65,6 +66,7 @@ class Sphere {
       record.t = temp
       record.p = ray.pointAt(temp)
       record.normal = divide(subtract(record.p, this.center), this.radius)
+      record.material = this.material
       return true
     }
 
@@ -128,27 +130,60 @@ const randomInUnitSphere = () => {
   return p
 }
 
-const color = (ray, world) => {
+class LambertianMaterial {
+  constructor(albedo) {
+    this.albedo = albedo
+  }
+  scatter(ray, record, ref) {
+    let target = addAll(record.p, record.normal, randomInUnitSphere())
+    let direction = subtract(target, record.p)
+    ref.scattered = new Ray(record.p, direction)
+    ref.attenuation = this.albedo
+    return true
+  }
+}
+
+const reflect = (v, n) => {
+  return subtract(v, mul(2.0 * dot(v, n), n))
+}
+
+class MetalMaterial {
+  constructor(albedo) {
+    this.albedo = albedo
+  }
+  scatter(ray, record, ref) {
+    let reflectedDirection = reflect(
+      vec3.normalize(vec3.create(), ray.direction()),
+      record.normal
+    )
+    ref.scattered = new Ray(record.p, reflectedDirection)
+    ref.attenuation = this.albedo
+    return dot(reflectedDirection, record.normal) > 0
+  }
+}
+
+const color = (ray, world, depth = 0) => {
   let record = createRecord()
 
-  // tmin 为 0.001 可以忽略光源到撞击点太近的反射光线
   if (world.hit(ray, 0.001, Infinity, record)) {
-    // /**
-    //  * 在反射场景中，反射点作为光源对外发射光线
-    //  * 如果该光线照射到的目标点，跟光源点足够接近
-    //  * 光线将在不断的反射过程中，消耗完能量，呈现黑色
-    //  */
-    // if (vec3.equals(record.p, ray.origin())) {
-    //   return from(0.0, 0.0, 0.0)
-    // }
+    let ref = {
+      scattered: null,
+      attenuation: 0
+    }
 
-    let target = addAll(record.p, record.normal, randomInUnitSphere())
-    let diffuseDirection = subtract(target, record.p)
-    let diffuseRay = new Ray(record.p, diffuseDirection)
-    return mul(0.5, color(diffuseRay, world))
+    if (depth >= 50 || !record.material.scatter(ray, record, ref)) {
+      return from(0.0, 0.0, 0.0)
+    }
+
+    return vec3.mul(
+      vec3.create(),
+      ref.attenuation,
+      color(ref.scattered, world, depth + 1)
+    )
   }
 
   let direction = vec3.normalize(vec3.create(), ray.direction())
+
   return lerp(
     0.5 * (direction[1] + 1.0),
     from(1.0, 1.0, 1.0),
@@ -173,8 +208,36 @@ const test = () => {
   let camera = new Camera(origin, lowerLeftCorner, horizontal, vertical)
   let world = new HitableList([])
 
-  world.push(new Sphere(from(0.0, 0.0, -1.0), 0.5))
-  world.push(new Sphere(from(0.0, -100.5, -1.0), 100))
+  world.push(
+    new Sphere(
+      from(0.0, 0.0, -1.0),
+      0.5,
+      new LambertianMaterial(from(0.8, 0.3, 0.3))
+    )
+  )
+  world.push(
+    new Sphere(
+      from(0.0, -100.5, -1.0),
+      100,
+      new LambertianMaterial(from(0.8, 0.8, 0.0))
+    )
+  )
+
+  world.push(
+    new Sphere(
+      from(1.0, 0.0, -1.0),
+      0.5,
+      new MetalMaterial(from(0.8, 0.6, 0.2))
+    )
+  )
+
+  world.push(
+    new Sphere(
+      from(-1.0, 0.0, -1.0),
+      0.5,
+      new MetalMaterial(from(0.8, 0.8, 0.8))
+    )
+  )
 
   for (let j = ny - 1; j >= 0; j--) {
     for (i = 0; i < nx; i++) {
@@ -188,11 +251,7 @@ const test = () => {
       }
 
       col = divide(col, ns)
-
-      // let u = i / nx
-      // let v = j / ny
-      // let ray = camera.getRay(u, v)
-      // let col = color(ray, world)
+      col = from(Math.sqrt(col[0]), Math.sqrt(col[1]), Math.sqrt(col[2]))
 
       let r = Math.floor(255.99 * col[0])
       let g = Math.floor(255.99 * col[1])

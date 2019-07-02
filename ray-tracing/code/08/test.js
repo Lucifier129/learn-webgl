@@ -131,17 +131,7 @@ const randomInUnitSphere = () => {
 const color = (ray, world) => {
   let record = createRecord()
 
-  // tmin 为 0.001 可以忽略光源到撞击点太近的反射光线
   if (world.hit(ray, 0.001, Infinity, record)) {
-    // /**
-    //  * 在反射场景中，反射点作为光源对外发射光线
-    //  * 如果该光线照射到的目标点，跟光源点足够接近
-    //  * 光线将在不断的反射过程中，消耗完能量，呈现黑色
-    //  */
-    // if (vec3.equals(record.p, ray.origin())) {
-    //   return from(0.0, 0.0, 0.0)
-    // }
-
     let target = addAll(record.p, record.normal, randomInUnitSphere())
     let diffuseDirection = subtract(target, record.p)
     let diffuseRay = new Ray(record.p, diffuseDirection)
@@ -188,11 +178,7 @@ const test = () => {
       }
 
       col = divide(col, ns)
-
-      // let u = i / nx
-      // let v = j / ny
-      // let ray = camera.getRay(u, v)
-      // let col = color(ray, world)
+      col = from(Math.sqrt(col[0]), Math.sqrt(col[1]), Math.sqrt(col[2]))
 
       let r = Math.floor(255.99 * col[0])
       let g = Math.floor(255.99 * col[1])
