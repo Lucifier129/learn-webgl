@@ -7,6 +7,7 @@
     "dat.gui": "^0.7.6",
     "gl-matrix": "^3.0.0",
     "koa-compose": "^4.1.0",
+    "operator-overloading": "^0.5.1",
     "react": "^16.8.6",
     "react-dom": "^16.8.6",
     "react-scripts": "2.1.8",

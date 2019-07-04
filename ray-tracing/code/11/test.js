@@ -1,9 +1,15 @@
 const fs = require('fs')
 const { vec3 } = require('gl-matrix')
-const { _add_, _sub_, _mul_, _div_, _negate_ } = require('../lib/runtime')
 
+const pipe = (...args) => args.reduce((a, f) => f(a))
 const from = (x, y, z) => vec3.fromValues(x, y, z)
+const mul = (n, vec3a) => vec3.mul(vec3.create(), from(n, n, n), vec3a)
+const add = (vec3a, vec3b) => vec3.add(vec3.create(), vec3a, vec3b)
+const subtract = (vec3a, vec3b) => vec3.subtract(vec3.create(), vec3a, vec3b)
+const addAll = (...args) => args.reduceRight(add)
+const mulAll = (...args) => args.reduce(mul)
 const dot = (vec3a, vec3b) => vec3.dot(vec3a, vec3b)
+const divide = (vec3a, n) => vec3.divide(vec3.create(), vec3a, from(n, n, n))
 
 class Ray {
   constructor(a, b) {
@@ -18,12 +24,12 @@ class Ray {
   }
   pointAt(t) {
     let { a, b } = this
-    return a + t * b
+    return add(a, mul(t, b))
   }
 }
 
 // linear-blend/linear-interpolation
-const lerp = (t, start, end) => (1.0 - t) * start + t * end
+const lerp = (t, start, end) => add(mul(1.0 - t, start), mul(t, end))
 
 const createRecord = () => {
   return {
@@ -40,7 +46,11 @@ class Sphere {
     this.material = material
   }
   hit(ray, tmin, tmax, record) {
-    let oc = ray.origin() - this.center
+    // let oc = calc(`origin - center`, {
+    //   origin: ray.origin(),
+    //   center: this.center
+    // })
+    let oc = subtract(ray.origin(), this.center)
     let a = dot(ray.direction(), ray.direction())
     let b = dot(oc, ray.direction())
     let c = dot(oc, oc) - this.radius * this.radius
@@ -59,7 +69,7 @@ class Sphere {
     if (isValid) {
       record.t = temp
       record.p = ray.pointAt(temp)
-      record.normal = (record.p - this.center) / this.radius
+      record.normal = divide(subtract(record.p, this.center), this.radius)
       record.material = this.material
       return true
     }
@@ -101,7 +111,11 @@ class Camera {
   }
   getRay(u, v) {
     let { origin, lowerLeftCorner, horizontal, vertical } = this
-    let direction = lowerLeftCorner + u * horizontal + v * vertical
+    let direction = addAll(
+      lowerLeftCorner,
+      mul(u, horizontal),
+      mul(v, vertical)
+    )
     let ray = new Ray(origin, direction)
     return ray
   }
@@ -111,8 +125,10 @@ const randomInUnitSphere = () => {
   let p
 
   do {
-    let randomVec3 = from(Math.random(), Math.random(), Math.random())
-    p = 2.0 * randomVec3 - from(1.0, 1.0, 1.0)
+    p = subtract(
+      mul(2.0, from(Math.random(), Math.random(), Math.random())),
+      from(1.0, 1.0, 1.0)
+    )
   } while (vec3.squaredLength(p) >= 1.0)
 
   return p
@@ -123,8 +139,8 @@ class LambertianMaterial {
     this.albedo = albedo
   }
   scatter(ray, record, ref) {
-    let target = record.p + record.normal + randomInUnitSphere()
-    let direction = target - record.p
+    let target = addAll(record.p, record.normal, randomInUnitSphere())
+    let direction = subtract(target, record.p)
     ref.scattered = new Ray(record.p, direction)
     ref.attenuation = this.albedo
     return true
@@ -132,7 +148,7 @@ class LambertianMaterial {
 }
 
 const reflect = (v, n) => {
-  return v - 2.0 * dot(v, n) * n
+  return subtract(v, mul(2.0 * dot(v, n), n))
 }
 
 class MetalMaterial {
@@ -141,13 +157,13 @@ class MetalMaterial {
     this.fuzz = Math.min(fuzz, 1)
   }
   scatter(ray, record, ref) {
-    let reflected = reflect(
+    let reflectedDirection = reflect(
       vec3.normalize(vec3.create(), ray.direction()),
       record.normal
     )
     ref.scattered = new Ray(
       record.p,
-      reflected + this.fuzz * randomInUnitSphere()
+      add(reflectedDirection, mul(this.fuzz, randomInUnitSphere()))
     )
     ref.attenuation = this.albedo
     return dot(ref.scattered.direction(), record.normal) > 0
@@ -160,8 +176,10 @@ const refract = (v, normal, ni_over_nt, ref) => {
   let discriminant = 1.0 - ni_over_nt * ni_over_nt * (1.0 - dt * dt)
 
   if (discriminant > 0) {
-    ref.refracted =
-      ni_over_nt * (uv - normal * dt) - normal * Math.sqrt(discriminant)
+    ref.refracted = subtract(
+      mul(ni_over_nt, vec3.subtract(vec3.create(), uv, mul(dt, normal))),
+      mul(Math.sqrt(discriminant), normal)
+    )
     return true
   }
 
@@ -180,7 +198,7 @@ class DielectricMaterial {
     ref.attenuation = from(1.0, 1.0, 1.0)
 
     if (dot(ray.direction(), record.normal) > 0) {
-      outwardNormal = -record.normal
+      outwardNormal = mul(-1.0, record.normal)
       ni_over_nt = this.refractIndex
     } else {
       outwardNormal = record.normal
@@ -211,7 +229,11 @@ const color = (ray, world, depth = 0) => {
       return from(0.0, 0.0, 0.0)
     }
 
-    return ref.attenuation * color(ref.scattered, world, depth + 1)
+    return vec3.mul(
+      vec3.create(),
+      ref.attenuation,
+      color(ref.scattered, world, depth + 1)
+    )
   }
 
   let direction = vec3.normalize(vec3.create(), ray.direction())
@@ -275,10 +297,10 @@ const test = () => {
         let u = (i + Math.random()) / nx
         let v = (j + Math.random()) / ny
         let ray = camera.getRay(u, v)
-        col = col + color(ray, world)
+        col = vec3.add(col, col, color(ray, world))
       }
 
-      col = col / ns
+      col = divide(col, ns)
       col = from(Math.sqrt(col[0]), Math.sqrt(col[1]), Math.sqrt(col[2]))
 
       let r = Math.floor(255.99 * col[0])
