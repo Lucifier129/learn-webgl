@@ -291,6 +291,7 @@ const test = () => {
   world.push(new Sphere(from(0.0, -100.5, -1.0), 100, new LambertianMaterial(from(0.8, 0.8, 0.0))));
   world.push(new Sphere(from(1.0, 0.0, -1.0), 0.5, new MetalMaterial(from(0.8, 0.6, 0.2), 0.0)));
   world.push(new Sphere(from(-1.0, 0.0, -1.0), 0.5, new DielectricMaterial(1.5)));
+  world.push(new Sphere(from(-1.0, 0.0, -1.0), -0.45, new DielectricMaterial(1.5)));
 
   for (let j = _sub_(ny, 1); j >= 0; j--) {
     for (i = 0; i < nx; i++) {

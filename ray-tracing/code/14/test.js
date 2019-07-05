@@ -4,6 +4,8 @@ const { _add_, _sub_, _mul_, _div_, _negate_ } = require('../lib/runtime')
 
 const from = (x, y, z) => vec3.fromValues(x, y, z)
 const dot = (vec3a, vec3b) => vec3.dot(vec3a, vec3b)
+const cross = (vec3a, vec3b) => vec3.cross(vec3.create(), vec3a, vec3b)
+const normalize = vec3a => vec3.normalize(vec3.create(), vec3a)
 
 class Ray {
   constructor(a, b) {
@@ -93,7 +95,18 @@ class HitableList {
 }
 
 class Camera {
-  constructor(origin, lowerLeftCorner, horizontal, vertical) {
+  constructor(lookFrom, lookAt, vup, vfov, aspect) {
+    let theta = (vfov * Math.PI) / 180
+    let halfHeight = Math.tan(theta / 2)
+    let halfWidth = halfHeight * aspect
+    let origin = lookFrom
+    let w = normalize(lookFrom - lookAt)
+    let u = normalize(cross(vup, w))
+    let v = cross(w, u)
+    let lowerLeftCorner = origin - u * halfWidth - v * halfHeight - w
+    let horizontal = 2 * u * halfWidth
+    let vertical = 2 * v * halfHeight
+
     this.origin = origin
     this.lowerLeftCorner = lowerLeftCorner
     this.horizontal = horizontal
@@ -101,7 +114,7 @@ class Camera {
   }
   getRay(u, v) {
     let { origin, lowerLeftCorner, horizontal, vertical } = this
-    let direction = lowerLeftCorner + u * horizontal + v * vertical
+    let direction = lowerLeftCorner + u * horizontal + v * vertical - origin
     let ray = new Ray(origin, direction)
     return ray
   }
@@ -251,11 +264,12 @@ const test = () => {
   content.push(`${nx} ${ny}`)
   content.push('255')
 
-  let lowerLeftCorner = from(-2.0, -1.0, -1.0)
-  let horizontal = from(4.0, 0.0, 0.0)
-  let vertical = from(0.0, 2.0, 0.0)
-  let origin = from(0.0, 0.0, 0.0)
-  let camera = new Camera(origin, lowerLeftCorner, horizontal, vertical)
+  let lookFrom = from(-2.0, 2.0, 1.0)
+  let lookAt = from(0.0, 0.0, -1.0)
+  let vup = from(0.0, 1.0, 0.0)
+  let vfov = 20
+  let aspect = nx / ny
+  let camera = new Camera(lookFrom, lookAt, vup, vfov, aspect)
   let world = new HitableList([])
 
   world.push(
@@ -283,6 +297,10 @@ const test = () => {
 
   world.push(
     new Sphere(from(-1.0, 0.0, -1.0), 0.5, new DielectricMaterial(1.5))
+  )
+
+  world.push(
+    new Sphere(from(-1.0, 0.0, -1.0), -0.45, new DielectricMaterial(1.5))
   )
 
   for (let j = ny - 1; j >= 0; j--) {

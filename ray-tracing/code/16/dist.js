@@ -16,6 +16,10 @@ const from = (x, y, z) => vec3.fromValues(x, y, z);
 
 const dot = (vec3a, vec3b) => vec3.dot(vec3a, vec3b);
 
+const cross = (vec3a, vec3b) => vec3.cross(vec3.create(), vec3a, vec3b);
+
+const normalize = vec3a => vec3.normalize(vec3.create(), vec3a);
+
 class Ray {
   constructor(a, b) {
     this.a = a;
@@ -119,15 +123,46 @@ class HitableList {
 
 }
 
+const randomInUnitDisk = () => {
+  let p;
+
+  do {
+    let randomVec3 = from(Math.random(), Math.random(), 0.0);
+    p = _sub_(_mul_(2.0, randomVec3), from(1.0, 1.0, 0.0));
+  } while (dot(p, p) >= 1.0);
+
+  return p;
+};
+
 class Camera {
-  constructor(origin, lowerLeftCorner, horizontal, vertical) {
+  constructor(lookFrom, lookAt, vup, vfov, aspect, aperture, focusDist) {
+    let theta = _div_(_mul_(vfov, Math.PI), 180);
+
+    let halfHeight = Math.tan(_div_(theta, 2));
+
+    let halfWidth = _mul_(halfHeight, aspect);
+
+    let origin = lookFrom;
+    let w = normalize(_sub_(lookFrom, lookAt));
+    let u = normalize(cross(vup, w));
+    let v = cross(w, u);
+
+    let lowerLeftCorner = _sub_(origin, _mul_(focusDist, _add_(_add_(_mul_(u, halfWidth), _mul_(v, halfHeight)), w)));
+
+    let horizontal = _mul_(_mul_(_mul_(focusDist, 2), u), halfWidth);
+
+    let vertical = _mul_(_mul_(_mul_(focusDist, 2), v), halfHeight);
+
+    this.u = u;
+    this.v = v;
     this.origin = origin;
     this.lowerLeftCorner = lowerLeftCorner;
     this.horizontal = horizontal;
     this.vertical = vertical;
+    this.lensRadius = _div_(aperture, 2);
   }
 
-  getRay(u, v) {
+  getRay(s, t) {
     let {
       origin,
       lowerLeftCorner,
@@ -135,9 +170,13 @@ class Camera {
       vertical
     } = this;
 
-    let direction = _add_(_add_(lowerLeftCorner, _mul_(u, horizontal)), _mul_(v, vertical));
+    let rd = _mul_(this.lensRadius, randomInUnitDisk());
 
-    let ray = new Ray(origin, direction);
+    let offset = _add_(_mul_(this.u, rd[0]), _mul_(this.v, rd[1]));
+
+    let direction = _sub_(_add_(_add_(lowerLeftCorner, _mul_(s, horizontal)), _mul_(t, vertical)), origin);
+
+    let ray = new Ray(_add_(origin, offset), _sub_(direction, offset));
     return ray;
   }
 
@@ -273,24 +312,58 @@ const color = (ray, world, depth = 0) => {
   return lerp(_mul_(0.5, _add_(direction[1], 1.0)), from(1.0, 1.0, 1.0), from(0.5, 0.7, 1.0));
 };
 
+const randomScene = () => {
+  let list = [];
+  let start = -11;
+  let end = 11;
+  list[0] = new Sphere(from(0.0, -1000, 0), 1000, new LambertianMaterial(from(0.5, 0.5, 0.5)));
+  let i = 1;
+  let based = from(4.0, 0.2, 0.0);
+
+  for (let a = start; a < end; a++) {
+    for (let b = start; b < end; b++) {
+      let chooseMat = Math.random();
+      let center = from(_add_(a, _mul_(0.9, Math.random())), 0.2, _add_(b, _mul_(0.9, Math.random())));
+
+      if (vec3.length(_sub_(center, based)) > 0.9) {
+        if (chooseMat < 0.8) {
+          let material = new LambertianMaterial(from(_mul_(Math.random(), Math.random()), _mul_(Math.random(), Math.random()), _mul_(Math.random(), Math.random())));
+          list[i++] = new Sphere(center, 0.2, material);
+        } else if (chooseMat < 0.95) {
+          let material = new MetalMaterial(from(_mul_(0.5, _add_(1, Math.random())), _mul_(0.5, _add_(1, Math.random())), _mul_(0.5, _add_(1, Math.random()))), _mul_(0.5, Math.random()));
+          list[i++] = new Sphere(center, 0.2, material);
+        } else {
+          list[i++] = new Sphere(center, 0.2, new DielectricMaterial(1.5));
+        }
+      }
+    }
+  }
+
+  list[i++] = new Sphere(from(0.0, 1.0, 0.0), 1.0, new DielectricMaterial(1.5));
+  list[i++] = new Sphere(from(-4.0, 1.0, 0.0), 1.0, new LambertianMaterial(from(0.4, 0.2, 0.1)));
+  list[i++] = new Sphere(from(4.0, 1.0, 0.0), 1.0, new MetalMaterial(from(0.7, 0.6, 0.5), 0.0));
+  return new HitableList(list);
+};
+
 const test = () => {
   let content = [];
-  let nx = 200;
-  let ny = 100;
+  let nx = 800;
+  let ny = 400;
   let ns = 100;
   content.push('P3');
   content.push(`${nx} ${ny}`);
   content.push('255');
-  let lowerLeftCorner = from(-2.0, -1.0, -1.0);
-  let horizontal = from(4.0, 0.0, 0.0);
-  let vertical = from(0.0, 2.0, 0.0);
-  let origin = from(0.0, 0.0, 0.0);
-  let camera = new Camera(origin, lowerLeftCorner, horizontal, vertical);
-  let world = new HitableList([]);
-  world.push(new Sphere(from(0.0, 0.0, -1.0), 0.5, new LambertianMaterial(from(0.1, 0.2, 0.5))));
-  world.push(new Sphere(from(0.0, -100.5, -1.0), 100, new LambertianMaterial(from(0.8, 0.8, 0.0))));
-  world.push(new Sphere(from(1.0, 0.0, -1.0), 0.5, new MetalMaterial(from(0.8, 0.6, 0.2), 0.0)));
-  world.push(new Sphere(from(-1.0, 0.0, -1.0), 0.5, new DielectricMaterial(1.5)));
+  let lookFrom = from(13.0, 2.0, 3.0);
+  let lookAt = from(0.0, 0.0, 0.0);
+  let vup = from(0.0, 1.0, 0.0);
+  let vfov = 20;
+
+  let aspect = _div_(nx, ny);
+
+  let focusDist = 10;
+  let aperture = 0.1;
+  let camera = new Camera(lookFrom, lookAt, vup, vfov, aspect, aperture, focusDist);
+  let world = randomScene();
 
   for (let j = _sub_(ny, 1); j >= 0; j--) {
     for (i = 0; i < nx; i++) {

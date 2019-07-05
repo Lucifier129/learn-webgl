@@ -285,6 +285,10 @@ const test = () => {
     new Sphere(from(-1.0, 0.0, -1.0), 0.5, new DielectricMaterial(1.5))
   )
 
+  world.push(
+    new Sphere(from(-1.0, 0.0, -1.0), -0.45, new DielectricMaterial(1.5))
+  )
+
   for (let j = ny - 1; j >= 0; j--) {
     for (i = 0; i < nx; i++) {
       let col = from(0.0, 0.0, 0.0)
