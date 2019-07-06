@@ -12,7 +12,55 @@ export default function Demo02() {
     let canvas = ref.current
     let gl = canvas.getContext('webgl')
     gl.viewport(0, 0, canvas.width, canvas.height)
-    renderCube(gl)
+
+    let params = {
+      fovy: 30,
+      near: 1,
+      far: 100,
+      eyeX: 3,
+      eyeY: 3,
+      eyeZ: 7,
+      centerX: 0,
+      centerY: 0,
+      centerZ: 0,
+      upX: 0,
+      upY: 1,
+      upZ: 0,
+      scaleX: 1,
+      scaleY: 1,
+      scaleZ: 1
+    }
+    let gui = new dat.GUI({ name: 'cube' })
+
+    gui.add(params, 'fovy', 0, 90)
+    gui.add(params, 'near', 1, 1000)
+    gui.add(params, 'far', 0, 1000)
+    gui.add(params, 'eyeX', -10, 100)
+    gui.add(params, 'eyeY', -10, 100)
+    gui.add(params, 'eyeZ', -10, 100)
+    gui.add(params, 'centerX', -1, 1)
+    gui.add(params, 'centerY', -1, 1)
+    gui.add(params, 'centerZ', -1, 1)
+    gui.add(params, 'upX', -10, 10)
+    gui.add(params, 'upY', -10, 10)
+    gui.add(params, 'upZ', -10, 10)
+    gui.add(params, 'scaleX', 0, 10).step(0.1)
+    gui.add(params, 'scaleY', 0, 10).step(0.1)
+    gui.add(params, 'scaleZ', 0, 10).step(0.1)
+
+    let clear = null
+    let over = false
+
+    renderCube(gl, params).then($clear => {
+      clear = $clear
+      if (over) clear()
+    })
+
+    return () => {
+      over = true
+      if (clear) clear()
+      gui.destroy()
+    }
   }, [])
 
   return <canvas width={400} height={400} ref={ref} />
@@ -28,45 +76,11 @@ const raf = f => {
   return () => cancelAnimationFrame(timer)
 }
 
-const renderCube = async gl => {
+const renderCube = async (gl, params) => {
   let cube = await makeCube(gl)
-  let params = {
-    fovy: 30,
-    near: 1,
-    far: 100,
-    eyeX: 3,
-    eyeY: 3,
-    eyeZ: 7,
-    centerX: 0,
-    centerY: 0,
-    centerZ: 0,
-    upX: 0,
-    upY: 1,
-    upZ: 0,
-    scaleX: 1,
-    scaleY: 1,
-    scaleZ: 1
-  }
-
-  let gui = new dat.GUI({ name: 'cube' })
-
-  gui.add(params, 'fovy', 0, 90)
-  gui.add(params, 'near', 1, 1000)
-  gui.add(params, 'far', 0, 1000)
-  gui.add(params, 'eyeX', -10, 100)
-  gui.add(params, 'eyeY', -10, 100)
-  gui.add(params, 'eyeZ', -10, 100)
-  gui.add(params, 'centerX', -1, 1)
-  gui.add(params, 'centerY', -1, 1)
-  gui.add(params, 'centerZ', -1, 1)
-  gui.add(params, 'upX', -10, 10)
-  gui.add(params, 'upY', -10, 10)
-  gui.add(params, 'upZ', -10, 10)
-  gui.add(params, 'scaleX', 0, 10).step(0.1)
-  gui.add(params, 'scaleY', 0, 10).step(0.1)
-  gui.add(params, 'scaleZ', 0, 10).step(0.1)
 
   return raf(() => {
+    console.log('raf')
     let projection = mat4.create()
     let modelview = mat4.create()
     let mvp = mat4.create()
@@ -91,7 +105,7 @@ const renderCube = async gl => {
       params.scaleY,
       params.scaleZ
     ])
-    
+
     mat4.multiply(mvp, projection, modelview)
 
     gl.enable(gl.DEPTH_TEST)

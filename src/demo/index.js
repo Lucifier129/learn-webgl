@@ -11,5 +11,6 @@ export default [
   React.lazy(() => import('./Demo08')),
   React.lazy(() => import('./Demo09')),
   React.lazy(() => import('./Demo10')),
-  React.lazy(() => import('./Demo11'))
+  React.lazy(() => import('./Demo11')),
+  React.lazy(() => import('./Demo12'))
 ]
