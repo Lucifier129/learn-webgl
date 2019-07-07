@@ -262,7 +262,6 @@ const color = (ray, world, depth = 0) => {
   }
 
   let direction = vec3.normalize(vec3.create(), ray.direction())
-
   return lerp(
     0.5 * (direction[1] + 1.0),
     from(1.0, 1.0, 1.0),
@@ -356,13 +355,18 @@ export default ({
   )
   let world = randomScene(amount)
 
-  return function*() {
+  let renderByPosition = (x, y) => {
+    let u = (x + Math.random()) / nx
+    let v = (y + Math.random()) / ny
+    let ray = camera.getRay(u, v)
+
+    return color(ray, world)
+  }
+
+  let render = function*() {
     for (let j = ny - 1; j >= 0; j--) {
       for (let i = 0; i < nx; i++) {
-        let u = (i + Math.random()) / nx
-        let v = (j + Math.random()) / ny
-        let ray = camera.getRay(u, v)
-        let [r, g, b] = color(ray, world)
+        let [r, g, b] = renderByPosition(i, j)
         let a = 1
 
         yield r
@@ -372,4 +376,6 @@ export default ({
       }
     }
   }
+
+  return { render, renderByPosition }
 }

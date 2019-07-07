@@ -362,15 +362,20 @@ export default (({
   let ny = height;
   let camera = new Camera(lookFrom, lookAt, vup, vfov, aspect, aperture, focusDist);
   let world = randomScene(amount);
-  return function* () {
+
+  let renderByPosition = (x, y) => {
+    let u = _div_(_add_(x, Math.random()), nx);
+
+    let v = _div_(_add_(y, Math.random()), ny);
+
+    let ray = camera.getRay(u, v);
+    return color(ray, world);
+  };
+
+  let render = function* () {
     for (let j = _sub_(ny, 1); j >= 0; j--) {
       for (let i = 0; i < nx; i++) {
-        let u = _div_(_add_(i, Math.random()), nx);
-
-        let v = _div_(_add_(j, Math.random()), ny);
-
-        let ray = camera.getRay(u, v);
-        let [r, g, b] = color(ray, world);
+        let [r, g, b] = renderByPosition(i, j);
         let a = 1;
         yield r;
         yield g;
@@ -378,5 +383,10 @@ export default (({
         yield a;
       }
     }
+  };
+
+  return {
+    render,
+    renderByPosition
   };
 });

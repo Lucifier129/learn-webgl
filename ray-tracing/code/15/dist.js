@@ -47,6 +47,14 @@ class Ray {
 
 const lerp = (t, start, end) => _add_(_mul_(_sub_(1.0, t), start), _mul_(t, end));
 
+const color = ray => {
+  let direction = normalize(ray.direction());
+
+  let t = _mul_(0.5, _add_(direction[1], 1.0));
+
+  return _add_(_mul_(_sub_(1.0, t), from(1.0, 1.0, 1.0)), _mul_(t, from(0.5, 0.7, 1.0)));
+};
+
 const createRecord = () => {
   return {
     t: 0,
@@ -292,7 +300,7 @@ class DielectricMaterial {
 
 }
 
-const color = (ray, world, depth = 0) => {
+const color1 = (ray, world, depth = 0) => {
   let record = createRecord();
 
   if (world.hit(ray, 0.001, Infinity, record)) {

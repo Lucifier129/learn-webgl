@@ -80,7 +80,6 @@ const renderCube = async (gl, params) => {
   let cube = await makeCube(gl)
 
   return raf(() => {
-    console.log('raf')
     let projection = mat4.create()
     let modelview = mat4.create()
     let mvp = mat4.create()
