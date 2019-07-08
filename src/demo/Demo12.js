@@ -199,6 +199,7 @@ export default function Demo01() {
   return (
     <>
       <canvas width={width} height={height} ref={ref} />
+      <br />
       <canvas width={width} height={height} ref={deubgRef} />
       <h3>光线追踪时间：{(time / 1000).toFixed(2)}秒</h3>
     </>

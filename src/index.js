@@ -13,7 +13,7 @@ const App = () => {
         setIndex(-1)
         return
       }
-      let targetIndex = Number(hash.slice(1))
+      let targetIndex = Number(hash.slice(1).split('?')[0])
       if (!isNaN(targetIndex)) setIndex(targetIndex)
     }
     handleHashChange()
