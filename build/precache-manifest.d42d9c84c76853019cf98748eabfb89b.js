@@ -16,12 +16,12 @@ self.__precacheManifest = [
     "url": "/learn-webgl/build/static/js/3.831c0cb1.chunk.js"
   },
   {
-    "revision": "863757c2870d849e03e1",
-    "url": "/learn-webgl/build/static/js/main.2b724dfb.chunk.js"
+    "revision": "f8b09611f3cddd1dfa4d",
+    "url": "/learn-webgl/build/static/js/main.e1e636cc.chunk.js"
   },
   {
-    "revision": "d7f61197e0e695789fb5",
-    "url": "/learn-webgl/build/static/js/runtime~main.1d262565.js"
+    "revision": "a076edf5bde52a461cf2",
+    "url": "/learn-webgl/build/static/js/runtime~main.28d5a30c.js"
   },
   {
     "revision": "09c7113dd50478c0bd79",
@@ -32,8 +32,8 @@ self.__precacheManifest = [
     "url": "/learn-webgl/build/static/js/7.ed2ea714.chunk.js"
   },
   {
-    "revision": "855f78ef64defb51308e",
-    "url": "/learn-webgl/build/static/js/8.9206595d.chunk.js"
+    "revision": "c1969920afedb054d54d",
+    "url": "/learn-webgl/build/static/js/8.26a04c6b.chunk.js"
   },
   {
     "revision": "1347edeb9e7b484d96a1",
@@ -84,7 +84,7 @@ self.__precacheManifest = [
     "url": "/learn-webgl/build/static/media/circle.def06678.gif"
   },
   {
-    "revision": "de35fbcdd6a8c059fb102e421a3619ff",
+    "revision": "9939968d870f7d79b684ac46b1687fac",
     "url": "/learn-webgl/build/index.html"
   }
 ];
