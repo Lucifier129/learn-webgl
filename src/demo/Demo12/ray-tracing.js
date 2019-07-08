@@ -8,7 +8,7 @@ const {
   _mul_,
   _div_,
   _negate_
-} = require('../lib/runtime');
+} = require('./runtime');
 
 const from = (x, y, z) => vec3.fromValues(x, y, z);
 

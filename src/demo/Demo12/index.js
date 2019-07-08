@@ -1,5 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react'
 import createRayTracing from './ray-tracing'
+// eslint-disable-next-line import/no-webpack-loader-syntax
+import Worker from 'worker-loader!./worker.js'
+
+const worker = new Worker()
+
+worker.postMessage({ a: 1 })
+worker.onmessage = function(event) {}
+
+worker.addEventListener('message', function(event) {
+  console.log('index', event)
+})
 
 const noop = () => {}
 const frame = (f = noop) =>
@@ -160,7 +171,7 @@ export default function Demo01() {
         let item = list[i]
         let x = item.index % width
         let y = height - Math.floor(item.index / width)
-        
+
         renderByPosition(x, y)
         duration = Date.now() - start
 
