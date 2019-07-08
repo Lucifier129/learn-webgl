@@ -201,8 +201,6 @@ export default function Demo01() {
       <canvas width={width} height={height} ref={ref} />
       <canvas width={width} height={height} ref={deubgRef} />
       <h3>光线追踪时间：{(time / 1000).toFixed(2)}秒</h3>
-      <h3>渲染次数：{count}</h3>
-      <h3>平均时间：{(count ? time / 1000 / count : 0).toFixed(2)}秒</h3>
     </>
   )
 }
