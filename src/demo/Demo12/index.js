@@ -1,16 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
 import createRayTracing from './ray-tracing'
-// eslint-disable-next-line import/no-webpack-loader-syntax
-import Worker from 'worker-loader!./worker.js'
-
-const worker = new Worker()
-
-worker.postMessage({ a: 1 })
-worker.onmessage = function(event) {}
-
-worker.addEventListener('message', function(event) {
-  console.log('index', event)
-})
 
 const noop = () => {}
 const frame = (f = noop) =>
@@ -52,7 +41,6 @@ const toColor = value => {
 }
 
 export default function Demo01() {
-  let [count, setCount] = useState(0)
   let [time, setTime] = useState(0)
   let ref = useRef()
   let deubgRef = useRef()
@@ -75,6 +63,7 @@ export default function Demo01() {
     let over = false
 
     let renderToCanvas = () => {
+      ctx.fillColor = `rgba(0, 0, 0, 1)`
       ctx.clearRect(0, 0, width, height)
       ctx.putImageData(imageData, 0, 0)
     }
@@ -125,6 +114,25 @@ export default function Demo01() {
       currImageData[i + 3] = imageData.data[i + 3]
     }
 
+    let coarseRender = async (step = 4) => {
+      let start = Date.now()
+      let duration = 0
+      for (let j = height - 1; j >= 0; j -= step) {
+        for (let i = 0; i < width; i += step) {
+          if (over) return
+          renderByPosition(i, j)
+          duration = Date.now() - start
+          if (duration % 100 === 0) {
+            setTime(innerTime + duration)
+            await frame(() => {
+              renderToCanvas()
+              showData()
+            })
+          }
+        }
+      }
+    }
+
     let render = async () => {
       let start = Date.now()
       let i = 0
@@ -151,7 +159,6 @@ export default function Demo01() {
       if (over) return
 
       renderToCanvas()
-      setCount(innerCount)
       setTime((innerTime += Date.now() - start))
       innerCount += 1
 
@@ -188,7 +195,6 @@ export default function Demo01() {
       if (over) return
 
       renderToCanvas()
-      setCount(innerCount)
       setTime((innerTime += Date.now() - start))
       tid = requestAnimationFrame(() => {
         if (count < 5) {
@@ -199,7 +205,7 @@ export default function Demo01() {
       })
     }
 
-    render()
+    coarseRender(4).then(render)
 
     return () => {
       over = true
@@ -209,7 +215,7 @@ export default function Demo01() {
 
   return (
     <>
-      <canvas width={width} height={height} ref={ref} />
+      <canvas width={width} height={height} ref={ref} style={{ background:'#000' }} />
       <br />
       <canvas width={width} height={height} ref={deubgRef} />
       <h3>光线追踪时间：{(time / 1000).toFixed(2)}秒</h3>

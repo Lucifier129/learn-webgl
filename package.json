@@ -12,8 +12,7 @@
     "react-dom": "^16.8.6",
     "react-scripts": "2.1.8",
     "rxjs": "^6.5.1",
-    "wobble": "^1.5.1",
-    "worker-loader": "^2.0.0"
+    "wobble": "^1.5.1"
   },
   "scripts": {
     "start": "react-scripts start",
