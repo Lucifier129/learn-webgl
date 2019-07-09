@@ -20,8 +20,8 @@ self.__precacheManifest = [
     "url": "/learn-webgl/build/static/js/main.e1e636cc.chunk.js"
   },
   {
-    "revision": "a076edf5bde52a461cf2",
-    "url": "/learn-webgl/build/static/js/runtime~main.28d5a30c.js"
+    "revision": "5366939e3393ee35b08d",
+    "url": "/learn-webgl/build/static/js/runtime~main.6f7b3035.js"
   },
   {
     "revision": "09c7113dd50478c0bd79",
@@ -32,8 +32,8 @@ self.__precacheManifest = [
     "url": "/learn-webgl/build/static/js/7.ed2ea714.chunk.js"
   },
   {
-    "revision": "c1969920afedb054d54d",
-    "url": "/learn-webgl/build/static/js/8.26a04c6b.chunk.js"
+    "revision": "eb8ee3c520f751424647",
+    "url": "/learn-webgl/build/static/js/8.5c970351.chunk.js"
   },
   {
     "revision": "1347edeb9e7b484d96a1",
@@ -84,7 +84,7 @@ self.__precacheManifest = [
     "url": "/learn-webgl/build/static/media/circle.def06678.gif"
   },
   {
-    "revision": "9939968d870f7d79b684ac46b1687fac",
+    "revision": "db520bf37da219bab1246c9063020e19",
     "url": "/learn-webgl/build/index.html"
   }
 ];
