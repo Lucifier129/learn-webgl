@@ -114,13 +114,28 @@ export default function Demo01() {
       currImageData[i + 3] = imageData.data[i + 3]
     }
 
-    let coarseRender = async (step = 4) => {
+    let render = async function(step = 1) {
       let start = Date.now()
       let duration = 0
-      for (let j = height - 1; j >= 0; j -= step) {
+      let j = height
+      while (true) {
+        if (j === 200) {
+          if (step === 1) innerCount += 1
+          setTime(innerTime += duration)
+          if (innerCount > 2) {
+            scheduleRender()
+          } else {
+            tid = requestAnimationFrame(() => render())
+          }
+          return
+        }
+
         for (let i = 0; i < width; i += step) {
           if (over) return
-          renderByPosition(i, j)
+          let x = i
+          let y = j < height / 2 ? height / 2 - j : height / 2 + height - j
+
+          renderByPosition(x, y)
           duration = Date.now() - start
           if (duration % 100 === 0) {
             setTime(innerTime + duration)
@@ -130,42 +145,12 @@ export default function Demo01() {
             })
           }
         }
-      }
-    }
 
-    let render = async () => {
-      let start = Date.now()
-      let i = 0
-      let duration = 0
-
-      for (let n of ray.render()) {
-        renderCount[i] += 1
-        data[i] += n
-        prevImageData[i] = imageData.data[i]
-        imageData.data[i] = toColor(data[i] / renderCount[i])
-        currImageData[i] = imageData.data[i]
-        i += 1
-        duration = Date.now() - start
-        if (duration % 100 === 0) {
-          setTime(innerTime + duration)
-          await frame(() => {
-            renderToCanvas()
-            showData()
-          })
+        if (j > height / 2) {
+          j = height - j
+        } else {
+          j = height - j - 1
         }
-        if (over) return
-      }
-
-      if (over) return
-
-      renderToCanvas()
-      setTime((innerTime += Date.now() - start))
-      innerCount += 1
-
-      if (innerCount > 2) {
-        scheduleRender()
-      } else {
-        tid = requestAnimationFrame(render)
       }
     }
 
@@ -205,7 +190,7 @@ export default function Demo01() {
       })
     }
 
-    coarseRender(4).then(render)
+    render(4)
 
     return () => {
       over = true
@@ -215,7 +200,12 @@ export default function Demo01() {
 
   return (
     <>
-      <canvas width={width} height={height} ref={ref} style={{ background:'#000' }} />
+      <canvas
+        width={width}
+        height={height}
+        ref={ref}
+        style={{ background: '#000' }}
+      />
       <br />
       <canvas width={width} height={height} ref={deubgRef} />
       <h3>光线追踪时间：{(time / 1000).toFixed(2)}秒</h3>
