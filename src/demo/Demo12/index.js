@@ -18,6 +18,44 @@ const getMSE = (listA, listB) => {
   return sum / listA.length
 }
 
+const incre = function*(start, end, step = 1) {
+  while (start <= end) {
+    yield start
+    start += step
+  }
+}
+
+const decre = function*(start, end, step = -1) {
+  while (start >= end) {
+    yield start
+    start += step
+  }
+}
+
+const range = function(start, end, step = 1) {
+  if (start < end) return incre(start, end, Math.abs(step))
+  return decre(start, end, -Math.abs(step))
+}
+
+const toggle = function*(a, b) {
+  while (true) {
+    let valueA = a.next()
+    let valueB = b.next()
+    if (valueA.done && valueB.done) break
+    if (!valueA.done) yield valueA.value
+    if (!valueB.done) yield valueB.value
+  }
+}
+
+const spread = function*(start, end, step = 1) {
+  let middle = Math.floor((end - start) / 2)
+  let source = toggle(
+    range(middle, start, step),
+    range(middle + step, end, step)
+  )
+  for (let v of source) yield v
+}
+
 // mean squared error
 const sortByMSE = (prev, current) => {
   let result = []
@@ -51,8 +89,10 @@ export default function Demo01() {
     let canvas = ref.current
     let debugCanvas = deubgRef.current
     let ctx = canvas.getContext('2d')
-    let ray = createRayTracing({ width, height, amount: 50 })
+    let debugCtx = debugCanvas.getContext('2d')
     let imageData = ctx.createImageData(width, height)
+    let debugImageData = debugCtx.createImageData(width, height)
+    let ray = createRayTracing({ width, height, amount: 50 })
     let data = new Float32Array(width * height * 4)
     let prevImageData = new Float32Array(width * height * 4)
     let currImageData = new Float32Array(width * height * 4)
@@ -68,25 +108,22 @@ export default function Demo01() {
       ctx.putImageData(imageData, 0, 0)
     }
 
-    let showData = () => {
+    let showDebugInfo = () => {
       let data = renderCount
-      let ctx = debugCanvas.getContext('2d')
-      let imageData = ctx.createImageData(width, height)
-
       for (let i = 0; i < data.length; i++) {
         if ((i + 1) % 4 === 0) {
-          imageData.data[i] = 255
+          debugImageData.data[i] = 255
         } else {
-          imageData.data[i] = data[i]
+          debugImageData.data[i] = data[i]
         }
       }
-      ctx.clearRect(0, 0, width, height)
-      ctx.putImageData(imageData, 0, 0)
+      debugCtx.clearRect(0, 0, width, height)
+      debugCtx.putImageData(debugImageData, 0, 0)
     }
 
     let renderByPosition = (x, y) => {
       let [r, g, b, a = 1] = ray.renderByPosition(x, y)
-      let i = ((height - y) * width + x) * 4
+      let i = ((height - 1 - y) * width + x) * 4
 
       data[i + 0] += r
       data[i + 1] += g
@@ -117,23 +154,10 @@ export default function Demo01() {
     let render = async function(step = 1) {
       let start = Date.now()
       let duration = 0
-      let j = height
-      while (true) {
-        if (j === 200) {
-          if (step === 1) innerCount += 1
-          setTime(innerTime += duration)
-          if (innerCount > 2) {
-            scheduleRender()
-          } else {
-            tid = requestAnimationFrame(() => render())
-          }
-          return
-        }
 
-        for (let i = 0; i < width; i += step) {
+      for (let y of spread(0, height - 1, step)) {
+        for (let x of range(0, width - 1, step)) {
           if (over) return
-          let x = i
-          let y = j < height / 2 ? height / 2 - j : height / 2 + height - j
 
           renderByPosition(x, y)
           duration = Date.now() - start
@@ -141,16 +165,20 @@ export default function Demo01() {
             setTime(innerTime + duration)
             await frame(() => {
               renderToCanvas()
-              showData()
+              showDebugInfo()
             })
           }
         }
+      }
 
-        if (j > height / 2) {
-          j = height - j
-        } else {
-          j = height - j - 1
-        }
+      if (step === 1) innerCount += 1
+      renderToCanvas()
+      showDebugInfo()
+      setTime((innerTime += duration))
+      if (innerCount > 2) {
+        scheduleRender()
+      } else {
+        tid = requestAnimationFrame(() => render())
       }
     }
 
@@ -171,7 +199,7 @@ export default function Demo01() {
           setTime(innerTime + duration)
           await frame(() => {
             renderToCanvas()
-            showData()
+            showDebugInfo()
           })
         }
         if (over) return
@@ -190,7 +218,7 @@ export default function Demo01() {
       })
     }
 
-    render(4)
+    render(3)
 
     return () => {
       over = true
