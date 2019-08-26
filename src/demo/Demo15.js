@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react'
-import test from '../lib/fgl'
+import test from '../lib/glower'
 
 export default function Demo01() {
   let ref = useRef()
