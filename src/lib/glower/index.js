@@ -48,9 +48,9 @@ export const create = factory => {
   return factory
 }
 
-export const render = (elem, root) => {
-  if (!isValidElement(elem)) {
-    throw new Error(`Unexpected elem received ${elem}`)
+export const render = (vnode, root) => {
+  if (!isValidElement(vnode)) {
+    throw new Error(`Unexpected elem received ${vnode}`)
   }
 
   if (!root) {
@@ -60,19 +60,30 @@ export const render = (elem, root) => {
   let previous = root[INTERNAL]
 
   if (!previous) {
-    let layer = init(elem, root)
-    let { regl, result, cache } = layer
+    let tick = null
+    let cache = new Map()
+    let record = new Map()
 
-    root[INTERNAL] = layer
-
-    let tick = regl.frame(() => {
-      renderer(result.record, regl, cache)
-    })
-
-    return () => {
-      tick.cancel()
-      regl.destroy()
+    let handler = {
+      addRecord: (key, value) => {
+        addRecord(record, key, value)
+      }
     }
+
+    let layer = init(vnode, handler)
+    let regl = createRegl(root)
+
+    root[INTERNAL] = { layer, root, regl }
+
+    let start = () => {
+      if (tick) tick.cancel()
+      tick = regl.frame(() => {
+        renderer(record, regl, cache)
+      })
+    }
+
+    start()
+    return
   }
 
   throw new Error('todo: supports update phase')
@@ -86,128 +97,34 @@ const renderer = (record, regl, cache) => {
   }
 }
 
-const init = (elem, root) => {
+const init = (vnode, handler) => {
   let layer = {
     [LAYER]: ROOT,
-    elem,
-    cache: new Map(),
-    regl: createRegl(root),
-    result: null
+    handler,
+    body: null
   }
-  let params = {}
-  let result = initNode(elem, layer, params)
 
-  layer.result = result
+  handler.root = layer
+  layer.body = initNode(vnode, layer, handler)
 
   return layer
 }
 
-// const update = (elem, oldLayer) => {
-//   let layer = {
-//     [LAYER]: ROOT,
-//     elem,
-//     cache: oldLayer.cache,
-//     regl: oldLayer.regl,
-//     result: null
-//   }
-
-//   let params = {}
-
-//   let result = updateNode(elem, oldLayer, layer, params)
-
-//   layer.result = result
-
-//   return layer
-// }
-
-// const updateNode = (newNode, oldLayer, parent, params) => {
-//   let oldNode = oldLayer.elem
-
-//   if (newNode === oldNode) {
-//     return oldLayer
-//   }
-
-//   if (newNode.type !== oldNode.type) {
-//     return initNode(newNode, parent, params)
-//   }
-
-//   if (newNode.type === FRAGMENT) {
-//     return updateFragment(newNode, oldLayer, parent, params)
-//   }
-
-//   if (newNode.type[ELEMENT]) {
-//     return updateElement(newNode, oldLayer, parent, params)
-//   }
-
-//   if (typeof node.type === 'function') {
-//     return updateComponent(node, oldLayer, parent, params)
-//   }
-
-//   throw new Error(`Unknown type of node ${node}`)
-// }
-
-// const createUpdateElement = typeName => (elem, oldLayer, parent, params) => {
-//   let layer = {
-//     [LAYER]: typeName,
-//     parent,
-//     elem,
-//     record: new Map(),
-//     factory: elem.type,
-//     children: []
-//   }
-
-//   let { factory, children, record } = layer
-
-//   if (typeof factory === 'function') {
-//     addRecord(record, factory, elem.props)
-//   }
-
-//   let oldChildren = oldLayer.elem.children
-
-//   for (let i = 0; i < elem.children.length; i++) {
-//     let child = elem.children[i]
-//     let childLayer = null
-
-//     // reuse the old layer if possible
-//     for (let j = 0; j < oldChildren.length; i++) {
-//       let oldChild = oldChildren[j]
-//       if (oldChild === child) {
-//         childLayer = oldLayer.children[j]
-//         break
-//       }
-//     }
-
-//     if (childLayer) {
-//       childLayer.parent = layer
-//     } else {
-//       childLayer = initNode(child, layer, params)
-//     }
-
-//     for (let [factory, props] of childLayer.record) {
-//       addRecord(record, factory, props)
-//     }
-
-//     children.push(layer)
-//   }
-
-//   return layer
-// }
-
-const initNode = (node, parent, params) => {
+const initNode = (node, parent, handler) => {
   if (!node || !node.type) {
     throw new Error(`Unexpeted node ${node}`)
   }
 
   if (node.type === FRAGMENT) {
-    return initFragment(node, parent, params)
+    return initFragment(node, parent, handler)
   }
 
   if (node.type[ELEMENT]) {
-    return initElement(node, parent, params)
+    return initElement(node, parent, handler)
   }
 
   if (typeof node.type === 'function') {
-    return initComponent(node, parent, params)
+    return initComponent(node, parent, handler)
   }
 
   throw new Error(`Unknown type of node ${node}`)
@@ -227,16 +144,21 @@ const addRecord = (record, key, value) => {
   record.set(key, list)
 }
 
-const initChildren = (children, parentLayer, params) => {
+const initChildren = (children, parent, handler) => {
   let results = []
+  let prev = null
 
   for (let i = 0; i < children.length; i++) {
     let child = children[i]
-    let childLayer = initNode(child, parentLayer, params)
+    let childLayer = initNode(child, parent, handler)
 
-    for (let [factory, props] of childLayer.record) {
-      addRecord(parentLayer.record, factory, props)
+    if (prev) {
+      prev.next = childLayer
     }
+
+    childLayer.prev = prev
+
+    prev = childLayer
 
     results.push(childLayer)
   }
@@ -244,8 +166,8 @@ const initChildren = (children, parentLayer, params) => {
   return results
 }
 
-const updateChildren = (children, parentLayer, oldParentLayer, params) => {
-  let oldChildren = oldParentLayer.elem.children
+const updateChildren = (children, parentLayer, oldParentLayer) => {
+  let oldChildren = oldParentLayer.vnode.children
   let statusList = Array(oldChildren.length)
 
   // check equal
@@ -310,7 +232,7 @@ const updateChildren = (children, parentLayer, oldParentLayer, params) => {
         layer.elem = child
       }
     } else {
-      results[i] = initNode(child, parentLayer, params)
+      results[i] = initNode(child, parentLayer)
     }
   }
 
@@ -319,52 +241,54 @@ const updateChildren = (children, parentLayer, oldParentLayer, params) => {
   return results
 }
 
-const createInitElement = typeName => (elem, parent, params) => {
+const createInitElement = typeName => (vnode, parent, handler) => {
   let layer = {
     [LAYER]: typeName,
+    root: handler.root,
     parent,
-    elem,
-    record: new Map(),
-    factory: elem.type,
-    children: null
+    vnode,
+    children: null,
+    next: null,
+    prev: null
   }
 
-  let { factory, children, record } = layer
-
-  if (typeof factory === 'function') {
-    addRecord(record, factory, elem.props)
+  if (typeName === ELEMENT) {
+    handler.addRecord(vnode.type, vnode.props)
   }
 
-  layer.children = initChildren(elem.children, layer, params)
+  layer.children = initChildren(vnode.children, layer, handler)
 
   return layer
 }
 
 const initElement = createInitElement(ELEMENT)
 const initFragment = createInitElement(FRAGMENT)
-const initContext = createInitElement(CONTEXT)
 
-const initComponent = (elem, parent, params) => {
+const initComponent = (vnode, parent, handler) => {
   let layer = {
     [LAYER]: COMPONENT,
+    root: handler.root,
+    vnode,
     parent,
-    elem,
-    record: new Map(),
+    next: null,
+    prev: null,
     contents: null,
     result: null
   }
 
-  let result = elem.type({
-    ...elem.props,
-    children: elem.children
+  let result = vnode.type({
+    ...vnode.props,
+    children: vnode.children
   })
 
   if (!Array.isArray(result)) {
     result = [result]
+  } else {
+    result = flatChildren(result)
   }
 
   layer.result = result
-  layer.contents = initChildren(result, layer, params)
+  layer.contents = initChildren(result, parent, handler)
 
   return layer
 }
