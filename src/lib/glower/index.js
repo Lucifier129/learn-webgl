@@ -10,7 +10,6 @@ import { mat4 } from 'gl-matrix'
 const ELEMENT = Symbol('element')
 const COMPONENT = Symbol('component')
 const FRAGMENT = Symbol('fragment')
-const CONTEXT = Symbol('context')
 const LAYER = Symbol('layer')
 const ROOT = Symbol('root')
 const INTERNAL = Symbol('internal')
@@ -162,81 +161,6 @@ const initChildren = (children, parent, handler) => {
 
     results.push(childLayer)
   }
-
-  return results
-}
-
-const updateChildren = (children, parentLayer, oldParentLayer) => {
-  let oldChildren = oldParentLayer.vnode.children
-  let statusList = Array(oldChildren.length)
-
-  // check equal
-  for (let i = 0; i < oldChildren.length; i++) {
-    let oldChild = oldChildren[i]
-
-    for (let j = 0; j < children.length; i++) {
-      if (statusList[j]) {
-        continue
-      }
-
-      let child = children[j]
-      if (child === oldChild) {
-        statusList[j] = 'equal'
-        break
-      }
-    }
-  }
-
-  let removes = []
-
-  // check update
-  for (let i = 0; i < oldChildren.length; i++) {
-    let oldChild = oldChildren[i]
-    let isReused = false
-
-    for (let j = 0; j < children.length; i++) {
-      if (statusList[j]) {
-        continue
-      }
-
-      let child = children[j]
-      if (
-        child.type === oldChild.type &&
-        child.props.key === oldChild.props.key
-      ) {
-        statusList[j] = 'update'
-        isReused = true
-        break
-      }
-    }
-
-    if (!isReused) {
-      removes.push(i)
-    }
-  }
-
-  let results = []
-
-  for (let i = 0; i < children.length; i++) {
-    let status = statusList[i]
-    let child = children[i]
-
-    if (status) {
-      let layer = oldParentLayer.children[i]
-
-      results[i] = layer
-
-      layer.status = status
-
-      if (status === 'update') {
-        layer.elem = child
-      }
-    } else {
-      results[i] = initNode(child, parentLayer)
-    }
-  }
-
-  // parentLayer.effects
 
   return results
 }
