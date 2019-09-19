@@ -11,11 +11,13 @@
     "gl-matrix": "^3.0.0",
     "koa-compose": "^4.1.0",
     "operator-overloading": "^0.5.1",
-    "react": "^16.8.6",
-    "react-dom": "^16.8.6",
+    "react": "^16.9.0",
+    "react-dom": "^16.9.0",
     "react-scripts": "2.1.8",
+    "react-three-fiber": "^2.3.6",
     "regl": "^1.3.11",
     "rxjs": "^6.5.1",
+    "three": "^0.108.0",
     "wobble": "^1.5.1"
   },
   "scripts": {
