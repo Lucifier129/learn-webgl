@@ -63,11 +63,6 @@ vec3 lerp(vec3 start,vec3 end,float t){
 
 Sphere sphere0=Sphere(vec3(0.,-100.5,-1.),100.);
 
-float aspect=u_resolution.x/u_resolution.y;
-
-float x=u_mouse.x/u_resolution.x;
-float y=u_mouse.y/u_resolution.y;
-
 Sphere sphere1=Sphere(vec3(0.,0.,-1.),.5);
 
 bool hit(Ray ray,float t_min,float t_max,out Hit_Record hit_record){
